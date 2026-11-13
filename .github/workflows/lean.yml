@@ -6,6 +6,9 @@ name: Verify bit-PHP Lean proof
 # Manual only: run from the Actions tab or `gh workflow run lean.yml --ref BRANCH`.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - cursor/lean-verify-push-1e2f
 
 permissions:
   contents: read
