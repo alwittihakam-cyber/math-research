@@ -12,6 +12,33 @@ STANDARD_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 NAME = r"[A-Za-z_][A-Za-z_0-9']*(?:\.[A-Za-z_][A-Za-z_0-9']*)*"
 
 
+def check_axiom_reports(output, declarations):
+    """Require one unambiguous Lean axiom report per audited declaration.
+
+    This is log validation, not a sandbox against arbitrary Lean metaprograms.
+    In particular, never silently select the first of conflicting reports.
+    """
+    for name in dict.fromkeys(declarations):
+        prefix = r"^'" + re.escape(name) + r"' "
+        reports = re.findall(
+            prefix + r"(?:depends on axioms: \[([^\]]*)\]|"
+            r"(does not depend on any axioms))[ \t]*$", output, re.M)
+        starts = re.findall(prefix + r"(?:depends on axioms:|does not depend on any axioms)",
+                            output, re.M)
+        if len(reports) != 1 or len(starts) != 1:
+            raise ValueError(f"{name}: expected exactly one complete axiom report; "
+                             f"found {len(reports)} complete and {len(starts)} report starts")
+        raw, no_axioms = reports[0]
+        if no_axioms:
+            continue
+        fields = [item.strip() for item in raw.split(",")]
+        if raw.strip() and any(not re.fullmatch(NAME, item) for item in fields):
+            raise ValueError(f"{name}: malformed axiom list")
+        axioms = set(fields) if raw.strip() else set()
+        if axioms - STANDARD_AXIOMS:
+            raise ValueError(f"{name}: unapproved axioms {sorted(axioms - STANDARD_AXIOMS)}")
+
+
 def module_name(path):
     parts = path.relative_to(ROOT).with_suffix("").parts
     for part in parts:
@@ -108,7 +135,7 @@ def main():
         if files:
             imports = ["import " + module_name(path) for path in files]
             commands = []
-            for name in declarations:
+            for name in dict.fromkeys(declarations):
                 commands.extend(["#check @" + name,
                                  "#print axioms " + name])
                 if name in interface_names:
@@ -118,14 +145,7 @@ def main():
                 temp.write(audit)
                 temp.flush()
                 output = run(["lake", "env", "lean", "-DwarningAsError=true", temp.name])
-            for name in declarations:
-                match = re.search(r"'" + re.escape(name) + r"' depends on axioms: \[([^\]]*)\]", output)
-                if match:
-                    axioms = {item.strip() for item in match[1].split(",") if item.strip()}
-                    if axioms - STANDARD_AXIOMS:
-                        raise ValueError(f"{name}: unapproved axioms {sorted(axioms - STANDARD_AXIOMS)}")
-                elif f"'{name}' does not depend on any axioms" not in output:
-                    raise ValueError(f"Missing axiom report for {name}")
+            check_axiom_reports(output, declarations)
         if any(path.read_bytes() != content for path, content in before.items()):
             raise ValueError("Dependency configuration changed during verification")
         emit(f"PASS: {len(files) - interface_files} proof files; {interface_files} interface files "
