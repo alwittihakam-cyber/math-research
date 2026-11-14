@@ -47,6 +47,9 @@ jobs:
           df -h . | tee "$EVIDENCE/disk-before-toolchain.txt"
           python3 -c 'import shutil; assert shutil.disk_usage(".").free >= 10 * 1024**3, "Need 10 GiB free before Lean installation"'
 
+      - name: Test the axiom-report parser
+        run: python3 -m unittest discover -s tests -p 'test_axiom_reports.py' -v
+
       - name: Install the pinned Lean toolchain only
         uses: leanprover/lean-action@v1
         with:
