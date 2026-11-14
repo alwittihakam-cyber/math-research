@@ -1,0 +1,17 @@
+{
+  "s": 5,
+  "k": 2,
+  "trials": 3000,
+  "affine_sets": 691381,
+  "nonzero_kernel_counts": {
+    "kernel=4,affine_span=4": 4,
+    "kernel=2,affine_span=2": 99,
+    "kernel=9,affine_span=9": 34,
+    "kernel=1,affine_span=1": 220,
+    "kernel=3,affine_span=3": 15,
+    "kernel=10,affine_span=10": 3,
+    "kernel=11,affine_span=11": 2
+  },
+  "span_failures": [],
+  "seconds": 53.62267758099915
+}
